@@ -1,0 +1,185 @@
+1. Wypisz wszystkie znajdujace sie w bazie tabele.
+
+	show full tables;
+
+2. Wypisz tytuły filmów o długo´sci wi˛ekszej ni˙z 2 godziny.
+
+	show title
+	from film
+	where lenght > 120;
+
+3. Wypisz tytuły 4 najkrótszych filmów o kategorii wiekowej PG-13.
+
+	select title
+	from film
+	where rating in ("PG-13")
+	order by length asc
+	limit 4;
+
+4. Wypisz tytuły filmów oraz ich jezyk, dla wszystkich filmów, w których opisie wystepuje słowo Drama.
+
+	select
+		film.language as tytul
+		language.name as jezyk
+	from film
+	join language on film.language_id = language.language_id
+	where film.description like '%Drama%';
+
+5. Wypisz tytuły filmów z kategorii Family, które w swoim opisie zawieraja słowo Documentary.
+
+	select film.title as tytul
+        from film
+        join film_category on film.film_id = film_category.film_id
+        join category on film_category.category_id = category.category_id
+        where category.name = 'Family'
+        and film.description like '%Documentary%';
+
+6. Wypisz tytuły filmów z kategorii Children, które nie naleza do kategorii wiekowej PG-13.
+
+	select film.title as tytul
+        from film
+        join film_category on film.film_id = film_category.film_id
+        join category on film_category.category_id = category.category_id
+        where rating not in ('PG-13')
+        and category.name in ('Children');
+
+7. Dla kazdej kategorii wiekowej filmów (G, PG-13, PG, NC-17, R) wypisz liczbe filmów do niej nalezacych.
+
+	select rating, count(*) as ilosc
+        from film
+        group by rating;
+
+8. Wypisz tytuły filmów wypozyczonych pomiedzy 31 maja a 30 czerwca 2005. Wyniki posortuj w odwrotnej kolejnosci alfabetycznej.
+
+	select film.title as tytul
+        from film
+        join inventory on film.film_id = inventory.film_id
+        join rental on inventory.inventory_id = rental.inventory_id
+        where rental_date between '2005-05-31' and '2005-06-30'
+        order by title asc;
+
+9. Wypisz imiona i nazwiska wszystkich aktorów, którzy wystapili w filmach zawierajacych usuniete sceny.
+
+	select distinct actor.first_name as imie, actor.last_name as nazwisko
+        from actor
+        join film_actor on actor.actor_id = film_actor.actor_id
+        join film on film_actor.film_id = film.film_id
+        where film.special_features like ('%Deleted Scenes%');
+
+10. Wypisz imiona oraz nazwiska wszystkich klientów, których wypozyczenie i odpowiadajaca mu płatnosc były obsłuzone przez 2 róznych pracowników.
+
+	select customer.first_name as imie_klienta, customer.last_name as nazwisko_klienta
+        from customer
+        join rental on rental.customer_id = customer.customer_id
+        join payment on payment.rental_id = rental.rental_id
+        where rental.staff_id != payment.staff_id;
+
+11. Wypisz imiona i nazwiska wszystkich klientów, którzy wypozyczyli wiecej filmów niz klient o e-mailu MARY.SMITH@sakilacustomer.org
+
+	select customer.first_name as imie_klienta, customer.last_name as nazwisko_klienta
+        from customer
+        join rental on customer.customer_id = rental.customer_id
+        group by customer.customer_id
+        having count(rental.rental_id) > (
+              select count(rental.rental_id)
+              from rental
+              join customer on rental.customer_id = customer.customer_id
+              where customer.email = 'MARY.SMITH@sakilacustomer.org'
+        );
+
+12. Wypisz wszystkie pary aktorów, którzy wystapili razem w wiecej niz jednym filmie. Kazda para powinna wystepowac co najwyzej raz. Jesli wystepuje para (X, Y), to nie wypisuj pary (Y, X).
+
+    select actor1.first_name as aktor_1_imie, actor1.last_name as aktor_1_nazwisko,
+        actor2.first_name as aktor_2_imie,
+        actor2.last_name as aktor_2_nazwisko,
+        count(*) as filmy_wspolne
+    from film_actor fa1
+    join film_actor fa2 on fa1.film_id = fa2.film_id
+    join actor actor1 on fa1.actor_id = actor1.actor_id
+    join actor actor2 on fa2.actor_id = actor2.actor_id
+    where fa1.actor_id < fa2.actor_id
+    group by actor1.actor_id, actor2.actor_id
+    having count(*) > 1
+    order by filmy_wspolne DESC;
+
+13. Wypisz nazwiska aktorów, którzy nie wystapili w zadnym filmie, którego tytuł zaczyna sie litera C.
+
+    select actor.last_name
+    from actor
+    where actor.actor_id not in (
+        select actor.actor_id
+        from actor
+        inner join film_actor on actor.actor_id = film_actor.actor_id
+        join film on film_actor.film_id = film.film_id
+        where film.title like 'C%'
+    );
+
+14. Wypisz nazwiska aktorów, którzy zagrali w wiekszej liczbie horrorów niz filmów akcji.
+
+    select actor.last_name
+    from actor
+    join film_actor on actor.actor_id = film_actor.actor_id
+    join film_category on film_category.film_id = film_actor.film_id
+    join category on film_category.category_id = category.category_id
+    group by actor.actor_id
+    having
+        count(case when category.name = 'Horror' then film_actor.film_id end) >
+        count(case when category.name = 'Action' then film_actor.film_id end);
+
+15. Wypisz wszystkich klientów, których srednia opłata za wypozyczony film jest nizsza niz srednia opłata dokonana 30 lipca 2005
+
+    select customer.first_name as imie_klienta, customer.last_name as nazwisko_klienta
+    from customer
+    join rental on customer.customer_id = rental.customer_id
+    join payment on payment.rental_id = rental.rental_id
+    group by customer.customer_id
+    having
+        avg(payment.amount) < (
+            select avg(payment.amount)
+            from payment
+            join rental on payment.rental_id = rental.rental_id
+            where rental.rental_date between '2005-07-30' and '2005-07-31'
+            );
+
+16. Zmien jezyk filmu YOUNG LANGUAGE na włoski
+
+    update film
+    set language_id = (
+        select language.language_id
+        from language
+        where name = 'Italian'
+        )
+    where title = 'YOUNG LANGUAGE';
+
+17. Dodaj do tabeli language jezyk hiszpanski i zmien jezyk wszystkich filmów, w których wystepuje ED CHASE na hiszpanski.
+
+    insert into language (name)
+    values ('Spanish');
+
+    update film
+    set language_id = (
+        select language.language_id
+        from language
+        where name = 'Spanish'
+        )
+    where film.film_id in (
+        select film_actor.film_id
+        from film_actor
+        join actor on actor.actor_id = film_actor.actor_id
+        where actor.first_name = 'ED' and actor.last_name = 'CHASE'
+        );
+18. Do tabeli language dodaj kolumne films_no i uzupełnij ja liczba filmów w danym jezyku.
+
+    alter table language add films_no int default 0;
+
+    update language
+    set language.films_no = (
+        select count(*)
+        from film
+        where film.language_id = language.language_id
+        );
+
+19. Usun kolumne release_year z tabeli film.
+
+    alter table film
+    drop column release_year;

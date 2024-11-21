@@ -1,0 +1,19 @@
+@startuml
+actor Student
+actor Lecturer
+actor Administrator
+
+usecase "View Schedule" as UC_ViewSchedule
+usecase "Register for Course" as UC_RegisterCourse
+usecase "View Grades" as UC_ViewGrades
+usecase "Submit Grades" as UC_SubmitGrades
+usecase "Manage Courses" as UC_ManageCourses
+
+Student --> UC_ViewSchedule
+Student --> UC_RegisterCourse
+Student --> UC_ViewGrades
+
+Lecturer --> UC_SubmitGrades
+
+Administrator --> UC_ManageCourses
+@enduml
